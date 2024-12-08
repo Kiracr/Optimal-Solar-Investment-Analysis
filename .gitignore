@@ -1,2 +1,4 @@
 .venv/
-
+.notebooks/benin.csv
+.notebooks/sierraleone.csv
+.notebooks/togo.csv

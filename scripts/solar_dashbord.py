@@ -1,86 +1,110 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
+from datetime import datetime
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy.stats import zscore
+from utils import load_city_data, filter_data_by_date
 
-# Load Data
-@st.cache
-def load_data(file):
-    return pd.read_csv(file)
+CITIES = ['benin-malanville', 'sierraleone-bumbuna', 'togo-dapaong_qc']
 
-# Sidebar - File Upload
-st.sidebar.header('Upload Solar Data')
-uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type="csv")
-if uploaded_file is not None:
-    df = load_data(uploaded_file)
-    st.write(f"Data Loaded Successfully! Dataset has {df.shape[0]} rows and {df.shape[1]} columns.")
-    
-    # Show first few rows of the dataset
-    if st.sidebar.checkbox('Show Raw Data'):
-        st.write(df.head())
 
-    # Data Cleaning - Handle Missing Values and Negative Values
-    if st.sidebar.checkbox('Handle Missing/Negative Values'):
-        df['GHI'] = df['GHI'].apply(lambda x: x if x >= 0 else np.nan)
-        df['DNI'] = df['DNI'].apply(lambda x: x if x >= 0 else np.nan)
-        df['DHI'] = df['DHI'].apply(lambda x: x if x >= 0 else np.nan)
-        df.fillna(df.mean(), inplace=True)
-        st.write("Missing and Negative Values Handled.")
+def load_sidebar():
+    """Renders the sidebar with city and date selection."""
+    st.sidebar.title(' Weather & Solar Dashboard')
+    selected_city = st.sidebar.selectbox('Select a City', CITIES)
+    selected_date = st.sidebar.date_input('Select a Date', datetime.now().date())
+    return selected_city, selected_date
 
-    # Sidebar - Select Features for Visualization
-    st.sidebar.header("Select Features for Analysis")
-    selected_columns = st.sidebar.multiselect('Select Columns to Plot:', df.columns.tolist(), default=['GHI', 'DNI', 'DHI', 'Tamb'])
 
-    # Visualize Key Metrics
-    st.header("Key Metrics")
-    st.subheader("Time Series Plot")
+def display_summary_statistics(data):
+    """Displays summary statistics for the selected data."""
+    st.subheader('Summary Statistics')
+    st.write(data.describe())
 
-    # Line Plot
-    if 'Timestamp' in df.columns:
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-        st.line_chart(df.set_index('Timestamp')[selected_columns])
 
-    # Correlation Matrix
-    st.subheader("Correlation Matrix")
-    corr = df[selected_columns].corr()
-    fig, ax = plt.subplots(figsize=(10, 8))
-    sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
-    st.pyplot(fig)
+def plot_irradiance(data):
+    """Plots solar irradiance data."""
+    st.subheader('Solar Irradiance Over Time')
+    fig = px.line(
+        data, 
+        x='Timestamp', 
+        y=['GHI', 'DNI', 'DHI'],
+        labels={'value': 'Irradiance (W/m²)', 'Timestamp': 'Time'},
+        title='Global, Direct, and Diffuse Irradiance'
+    )
+    st.plotly_chart(fig)
 
-    # Histograms
-    st.subheader("Histogram for Selected Columns")
-    for column in selected_columns:
-        fig, ax = plt.subplots()
-        df[column].plot(kind='hist', bins=30, ax=ax, title=f'Histogram of {column}')
-        st.pyplot(fig)
 
-    # Scatter Plot
-    st.subheader("Scatter Plot")
-    scatter_x = st.selectbox("Select X-axis for Scatter Plot", selected_columns)
-    scatter_y = st.selectbox("Select Y-axis for Scatter Plot", selected_columns)
-    fig, ax = plt.subplots()
-    ax.scatter(df[scatter_x], df[scatter_y])
-    ax.set_xlabel(scatter_x)
-    ax.set_ylabel(scatter_y)
-    st.pyplot(fig)
+def plot_temperature_and_humidity(data):
+    """Plots ambient temperature and humidity data."""
+    st.subheader('Ambient Temperature and Relative Humidity')
+    fig = px.line(
+        data, 
+        x='Timestamp', 
+        y=['Tamb', 'RH'],
+        labels={'value': 'Measurement', 'Timestamp': 'Time'},
+        title='Temperature (°C) and Humidity (%)'
+    )
+    st.plotly_chart(fig)
 
-    # Z-Score Analysis
-    st.subheader("Z-Score Analysis")
-    z_scores = df[selected_columns].apply(zscore)
-    st.write(z_scores.head())
 
-    # Interactive Features
-    st.sidebar.header("Interactive Analysis")
-    feature_to_analyze = st.sidebar.selectbox("Select Feature for Detailed View", df.columns)
-    st.write(df[[feature_to_analyze]].describe())
+def plot_wind_data(data):
+    """Plots wind speed and gust data."""
+    st.subheader('Wind Speed and Direction')
+    fig = px.line(
+        data, 
+        x='Timestamp', 
+        y=['WS', 'WSgust'],
+        labels={'value': 'Wind Speed (m/s)', 'Timestamp': 'Time'},
+        title='Wind Speed and Gusts'
+    )
+    st.plotly_chart(fig)
 
-    # Filter Data Based on Specific Criteria
-    st.sidebar.header("Filter Data")
-    country_filter = st.sidebar.selectbox("Select Country", df['country'].unique())
-    filtered_data = df[df['country'] == country_filter]
-    st.write(f"Filtered Data for {country_filter}:", filtered_data)
 
-# Footer
-st.sidebar.markdown("### Created by Your Name")
+def plot_module_temperatures(data):
+    """Plots module temperatures."""
+    st.subheader('Module Temperatures (A & B)')
+    fig = px.line(
+        data, 
+        x='Timestamp', 
+        y=['TModA', 'TModB'],
+        labels={'value': 'Temperature (°C)', 'Timestamp': 'Time'},
+        title='Temperature of Modules A and B'
+    )
+    st.plotly_chart(fig)
+
+
+def display_raw_data(data):
+    """Displays the raw data."""
+    st.subheader('Raw Data')
+    st.dataframe(data)
+
+
+def main():
+    """Main function to execute the Streamlit app."""
+    selected_city, selected_date = load_sidebar()
+
+    # Load data for the selected city
+    df = load_city_data(selected_city)
+    if df.empty:
+        st.error("Failed to load data. Please check the data files.")
+        return
+
+    st.sidebar.success(f"Loaded data for **{selected_city}**")
+
+    # Filter data for the selected date
+    daily_data = filter_data_by_date(df, selected_date)
+    if daily_data.empty:
+        st.warning(f"No data available for {selected_date} in {selected_city}.")
+    else:
+        st.title(f"{selected_date} - {selected_city.capitalize()} Weather & Solar Data")
+        display_summary_statistics(daily_data)
+        plot_irradiance(daily_data)
+        plot_temperature_and_humidity(daily_data)
+        plot_wind_data(daily_data)
+        plot_module_temperatures(daily_data)
+        display_raw_data(daily_data)
+
+
+if __name__ == '__main__':
+    main()

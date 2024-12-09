@@ -26,8 +26,7 @@ This initiative is a Weather & Solar Dashboard developed with Streamlit, Pandas,
 
   1. Clone the repository:
 
-     git clone https:https://github.com/Kiracr/Optimal-Solar-Investment-Analysis/ 
-cd TenX
+     git clone https:https://github.com/Kiracr/Optimal-Solar-Investment-Analysis
 
   2.  Install dependencies:
 
@@ -47,8 +46,6 @@ The project’s dataset is organized into CSV files stored in the data folder. E
 ## File Structure
 
       
-├── tests
-│   
 ├── .github
 │   └── workflows
 │       ├── unittests.yml
@@ -56,15 +53,20 @@ The project’s dataset is organized into CSV files stored in the data folder. E
 ├── requirements.txt
 ├── README.md
 ├── notebooks
-│   ├── __init__.py
-│   ├── example.ipynb
-│   └── README.md
+│       ├── __init__.py
+|       ├── Correlation_analysis.ipynb
+|       ├── Data_cleaning.ipynb
+|       ├── Data_quality_check.ipynb
+|       ├── Histograms_and_bubble_chart.ipynb
+|       ├── Summary_statistics.ipynb
+|       ├── Time_series_analysis.ipynb
+|       ├── Wind_and_temp_analysis.ipynb
+|       └── README.md
 ├── tests
 │   ├── __init__.py
 ├── Src
 └── scripts
     ├── __init__.py
     └── README.md
-      
 
 
